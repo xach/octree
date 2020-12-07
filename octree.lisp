@@ -71,6 +71,8 @@ components."
                (stroke))
       (vecto::image vecto::*graphics-state*))))
 
+
+
 (defun call-for-image-pixels (fun image)
   (let ((samples-per-pixel (zpng:samples-per-pixel image))
         (data (zpng:image-data image)))
@@ -235,3 +237,52 @@ components."
                                  :color-table color-table
                                  :initial-images (list gif-image))))
       (output-data-stream ds file ))))
+
+(defun vimage-gif-image ()
+  (let* ((img (vecto::image vecto::*graphics-state*))
+         (q (make-image-quantizer img))
+         (width (zpng:width img))
+         (height (zpng:height img))
+         (color-table (make-color-table ))
+         (gif-image-data
+           (make-array (* width height)
+                       :element-type '(unsigned-byte 8)))
+         (p (make-palette q 256))
+         (i 0))
+    (dolist (node p)
+      (let ((color (node-average-color node)))
+        (add-color (logior (ash (red color) 16)
+                           (ash (green color) 8)
+                           (ash (blue color) 0))
+                   color-table)))
+    (do-image-pixels (r g b) img
+      (setf (aref gif-image-data i)
+            (palette-index q (make-color :red r :green g :blue b)))
+      (incf i))
+    (make-image :width width :height height
+                :delay-time 5
+                :image-data gif-image-data
+                :color-table color-table)))
+
+(defun test-animation (file)
+  (let* ((canvas (box 0 0 256 256))
+         (ds (make-data-stream :width (vectometry:width canvas)
+                               :height (vectometry:height canvas)
+                               :loopingp t)))
+    (with-box-canvas canvas
+      (loop for divisor downfrom 100
+            repeat 94 do
+              (set-fill-color *white*)
+              (clear-canvas)
+              (set-line-cap :round)
+              (set-line-width 5)
+              (loop for hue from 0 below 360 by 30
+                    for angle from 0.0 by (/ pi divisor)
+                    do
+                       (set-stroke-color (hsv-color hue 1 1))
+                       (move-to (centerpoint canvas))
+                       (line-to (add (centerpoint canvas)
+                                     (apoint angle 128)))
+                       (stroke))
+              (add-image (vimage-gif-image) ds)))
+    (output-data-stream ds file)))
