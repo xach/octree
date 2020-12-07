@@ -1,9 +1,6 @@
 ;;;; octree.lisp
 
-(defpackage #:octree
-  (:use #:cl
-        #:vectometry)
-  (:shadow #:red #:green #:blue))
+
 
 (in-package #:octree)
 
@@ -14,24 +11,11 @@
   (green 0)
   (blue 0))
 
-(defstruct (octree-node (:constructor %make-octree-node))
-  quantizer
+(defstruct octree-node
   (color-count 0)
   color-index
   rgb
   children)
-
-(defun make-octree-node (quantizer level)
-  )
-
-(defstruct (quantizer (:constructor %make-quantizer))
-  levels
-  root)
-
-(defun make-quantizer ()
-  (%make-quantizer :levels (make-array +max-depth+
-                                       :initial-element '())
-                   :root (make-octree-node )))
 
 (defun xbit (index integer)
   (ldb (byte 1 index) integer))
@@ -68,9 +52,6 @@ components."
                                 (make-octree-node)))))
            (node-add-color child color (1+ level))))))
 
-(defun quantizer-add-color (quantizer color)
-  (node-add-color (quantizer-root quantizer) color 0))
-
 (defun test-image-data ()
   (let ((canvas (box 0 0 256 256)))
     (with-box-canvas canvas
@@ -88,7 +69,6 @@ components."
                (line-to (add (centerpoint canvas)
                              (apoint angle 64)))
                (stroke))
-      (save-png "foo.png")
       (vecto::image vecto::*graphics-state*))))
 
 (defun call-for-image-pixels (fun image)
@@ -154,12 +134,14 @@ components."
                        (octree-node-rgb child)))))
          (children node))
     (setf (octree-node-children node) nil)
-    absorbed))
+    (1- absorbed)))
 
 (defun node-average-color (node)
   (let ((count (octree-node-color-count node))
-        (color (octree-node-color node)))
-    (make-color (read ))))
+        (color (octree-node-rgb node)))
+    (make-color :red (truncate (red color) count)
+                :green (truncate (green color) count)
+                :blue (truncate (blue color) count))))
 
 (defun child (node index)
   (aref (octree-node-children node) index))
@@ -168,9 +150,9 @@ components."
   (octree-node-children node))
 
 (defun make-image-quantizer (image)
-  (let ((quantizer (make-quantizer)))
+  (let ((quantizer (make-octree-node)))
     (do-image-pixels (r g b) image
-      (quantizer-add-color quantizer (make-color :red r :green g :blue b)))
+      (node-add-color quantizer (make-color :red r :green g :blue b) 0))
     quantizer))
 
 (defmacro do-children ((child node) &body body)
@@ -185,14 +167,14 @@ components."
                  (push node (aref levels level))
                  (do-children (child node)
                    (traverse child (1+ level))))))
-      (traverse (quantizer-root quantizer) 0))
+      (traverse quantizer 0))
     levels))
 
 (defun make-palette (quantizer color-count)
   (let* ((palette '())
          (palette-index 0)
          (levels (make-levels-array quantizer))
-         (root (quantizer-root quantizer))
+         (root quantizer)
          (leaf-count (leaf-count root)))
     (block palette
       (loop for level downfrom (1- +max-depth+) to 0
@@ -212,4 +194,11 @@ components."
                 root))
     (reverse palette)))
 
-(defun palette-index (node))
+(defun palette-index (node color)
+  (labels ((lookup (node level)
+             (if (leafp node)
+                 (octree-node-color-index node)
+                 (let ((index (branch color level)))
+                   (lookup (child node index) (1+ level))))))
+    (lookup node 0)))
+
