@@ -202,3 +202,36 @@ components."
                    (lookup (child node index) (1+ level))))))
     (lookup node 0)))
 
+(defun test-all-pixels-in-palette (img)
+  (let* ((q (make-image-quantizer img))
+         (p (make-palette q 256)))
+    (declare (ignore p))
+    (do-image-pixels (r g b) img
+      (palette-index q (make-color :red r :green g :blue b)))))
+
+(defun test-write-a-gif (img file)
+  (let* ((q (make-image-quantizer img))
+         (width (zpng:width img))
+         (height (zpng:height img))
+         (color-table (make-color-table ))
+         (gif-image-data
+           (make-array (* width height)
+                       :element-type '(unsigned-byte 8)))
+         (p (make-palette q 256))
+         (i 0))
+    (dolist (node p)
+      (let ((color (node-average-color node)))
+        (add-color (logior (ash (red color) 16)
+                           (ash (green color) 8)
+                           (ash (blue color) 0))
+                   color-table)))
+    (do-image-pixels (r g b) img
+      (setf (aref gif-image-data i)
+            (palette-index q (make-color :red r :green g :blue b)))
+      (incf i))
+    (let* ((gif-image (make-image :width width :height height
+                                  :image-data gif-image-data))
+           (ds (make-data-stream :width width :height height
+                                 :color-table color-table
+                                 :initial-images (list gif-image))))
+      (output-data-stream ds file ))))
