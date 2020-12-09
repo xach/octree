@@ -72,7 +72,6 @@ components."
       (vecto::image vecto::*graphics-state*))))
 
 
-
 (defun call-for-image-pixels (fun image)
   (let ((samples-per-pixel (zpng:samples-per-pixel image))
         (data (zpng:image-data image)))
@@ -238,7 +237,7 @@ components."
                                  :initial-images (list gif-image))))
       (output-data-stream ds file ))))
 
-(defun vimage-gif-image ()
+(defun vimage-gif-image (&key (delay-time 5))
   (let* ((img (vecto::image vecto::*graphics-state*))
          (q (make-image-quantizer img))
          (width (zpng:width img))
@@ -260,7 +259,7 @@ components."
             (palette-index q (make-color :red r :green g :blue b)))
       (incf i))
     (make-image :width width :height height
-                :delay-time 5
+                :delay-time delay-time
                 :image-data gif-image-data
                 :color-table color-table)))
 
