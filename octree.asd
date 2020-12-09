@@ -5,5 +5,6 @@
   :depends-on (#:vectometry
                #:skippy)
   :components ((:file "package")
-               (:file "octree")))
+               (:file "octree")
+               (:file "hex-art")))
 
