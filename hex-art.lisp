@@ -209,6 +209,7 @@ normalized value between 0 and 1.0."
          (green (hsv-color 120 1 1))
          (blue (hsv-color 240 1 1)))
     (with-box-canvas canvas
+      (setf (vecto::blend-style vecto::*graphics-state*) :add)
       (dotimes (i frames)
         (let ((horizontal-displacement (remap-sine 0 frames
                                                    0 (* 3 radius)
