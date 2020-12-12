@@ -6,5 +6,7 @@
                #:skippy)
   :components ((:file "package")
                (:file "octree")
-               (:file "hex-art")))
+               (:file "hex-art")
+               (:file "stringstack")
+               (:file "text-art")))
 
